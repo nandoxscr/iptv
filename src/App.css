@@ -1,0 +1,42 @@
+/* src/App.css */
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.channel-list {
+  margin: 20px;
+}
+
+.channel-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.channel-list li {
+  cursor: pointer;
+  margin: 5px 0;
+  padding: 10px;
+  background-color: #61dafb;
+  border-radius: 4px;
+}
+
+.channel-list li:hover {
+  background-color: #21a1f1;
+}
+
+.video-player {
+  width: 80%;
+  max-width: 800px;
+  margin: 20px auto;
+}

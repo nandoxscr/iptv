@@ -1,0 +1,32 @@
+export const getPlaylistsFromDB = async () => {
+    const db = await initDB();
+    const tx = db.transaction('PLAYLIST_STORE', 'readonly');
+    const store = tx.objectStore('PLAYLIST_STORE');
+    const playlists = await store.getAll();
+    await tx.done;
+    return playlists;
+  };
+  
+  export const addPlaylistToDB = async (playlist) => {
+    const db = await initDB();
+    const tx = db.transaction('PLAYLIST_STORE', 'readwrite');
+    const store = tx.objectStore('PLAYLIST_STORE');
+    await store.put(playlist);
+    await tx.done;
+  };
+  
+  export const deletePlaylistFromDB = async (id) => {
+    const db = await initDB();
+    const tx = db.transaction('PLAYLIST_STORE', 'readwrite');
+    const store = tx.objectStore('PLAYLIST_STORE');
+    await store.delete(id);
+    await tx.done;
+  };
+  
+  export const updatePlaylistInDB = async (id, updatedPlaylist) => {
+    const db = await initDB();
+    const tx = db.transaction('PLAYLIST_STORE', 'readwrite');
+    const store = tx.objectStore('PLAYLIST_STORE');
+    await store.put({ ...updatedPlaylist, id });
+    await tx.done;
+  };
