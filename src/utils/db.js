@@ -1,45 +1,35 @@
 import { openDB } from 'idb';
 
-const DB_NAME = 'IPTV';
-const DB_VERSION = 1;
-const PLAYLIST_STORE = 'playlists';
+const DB_NAME = 'IPTVDatabase';
+const STORE_NAME = 'playlists';
+const VERSION = 1;
 
-const initDB = async () => {
-  return openDB(DB_NAME, DB_VERSION, {
+async function initDB() {
+  return openDB(DB_NAME, VERSION, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains(PLAYLIST_STORE)) {
-        db.createObjectStore(PLAYLIST_STORE, { keyPath: 'id', autoIncrement: true });
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
       }
     },
   });
-};
+}
 
-export const addPlaylistToDB = async (playlist) => {
+export async function getPlaylistsFromDB() {
   const db = await initDB();
-  const tx = db.transaction(PLAYLIST_STORE, 'readwrite');
-  await tx.store.add(playlist);
-  await tx.done;
-};
+  return db.getAll(STORE_NAME);
+}
 
-export const getPlaylistsFromDB = async () => {
+export async function addPlaylistToDB(playlist) {
   const db = await initDB();
-  const tx = db.transaction(PLAYLIST_STORE, 'readonly');
-  const store = tx.store;
-  const playlists = await store.getAll();
-  await tx.done;
-  return playlists;
-};
+  await db.add(STORE_NAME, playlist);
+}
 
-export const updatePlaylistInDB = async (id, updatedPlaylist) => {
+export async function deletePlaylistFromDB(id) {
   const db = await initDB();
-  const tx = db.transaction(PLAYLIST_STORE, 'readwrite');
-  await tx.store.put({ ...updatedPlaylist, id });
-  await tx.done;
-};
+  await db.delete(STORE_NAME, id);
+}
 
-export const deletePlaylistFromDB = async (id) => {
+export async function updatePlaylistInDB(id, updatedPlaylist) {
   const db = await initDB();
-  const tx = db.transaction(PLAYLIST_STORE, 'readwrite');
-  await tx.store.delete(id);
-  await tx.done;
-};
+  await db.put(STORE_NAME, updatedPlaylist);
+}
