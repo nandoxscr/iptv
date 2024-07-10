@@ -5,7 +5,11 @@ import { Box, List, ListItem, ListItemText } from '@mui/material';
 const ChannelList = ({ category }) => {
   const { playlists } = usePlaylistContext();
 
-  const filteredChannels = playlists.flatMap(playlist =>
+  if (!playlists) {
+    return <div>Loading...</div>;
+  }
+
+  const filteredChannels = playlists.flatMap(playlist => 
     (playlist.items || []).filter(item => item.groupTitle === category)
   );
 
