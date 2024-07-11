@@ -1,5 +1,7 @@
+// src/components/ManagePlaylists.js
+
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
+import { TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -16,28 +18,41 @@ function ManagePlaylists() {
     const fetchPlaylists = async () => {
       const dbPlaylists = await getPlaylistsFromDB();
       setPlaylists(dbPlaylists);
+      const selected = dbPlaylists.find(p => p.isSelected);
+      if (selected) {
+        setSelectedPlaylist(dbPlaylists.indexOf(selected));
+      }
     };
     fetchPlaylists();
   }, []);
 
   const addPlaylist = async () => {
-    const newPlaylist = { name: playlistName, url: playlistUrl };
+    const newPlaylist = { name: playlistName, url: playlistUrl, isSelected: false };
     await addPlaylistToDB(newPlaylist);
     setPlaylists([...playlists, newPlaylist]);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
-  const handleCheckboxChange = (index) => {
+  const handleCheckboxChange = async (index) => {
+    const updatedPlaylists = playlists.map((playlist, i) => ({
+      ...playlist,
+      isSelected: i === index,
+    }));
+    setPlaylists(updatedPlaylists);
     setSelectedPlaylist(index);
+    await Promise.all(updatedPlaylists.map(p => updatePlaylistInDB(p.id, p)));
   };
 
   const saveToDatabase = async () => {
     if (selectedPlaylist !== null) {
       const selected = playlists[selectedPlaylist];
       try {
-        await updatePlaylistInDB(selected.id, selected); // Using updatePlaylistInDB from db.js
+        await updatePlaylistInDB(selected.id, selected);
         console.log('Playlist saved successfully');
+        const dbPlaylists = await getPlaylistsFromDB();
+        const updatedPlaylist = dbPlaylists.find(p => p.id === selected.id);
+        console.log('Updated playlist from DB:', updatedPlaylist);
       } catch (error) {
         console.error('Error saving playlist:', error);
       }
