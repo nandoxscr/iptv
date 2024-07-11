@@ -1,56 +1,65 @@
 import React, { useState } from 'react';
-import { usePlaylistContext } from '../context/PlaylistContext';
-import { Box, TextField, Button, List, ListItem, ListItemText, IconButton } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import { v4 as uuidv4 } from 'uuid'; // Importing uuid to generate unique ids
+import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 
-const ManagePlaylists = () => {
-  const { playlists, addPlaylist, deletePlaylist } = usePlaylistContext();
+function ManagePlaylists() {
+  const [playlists, setPlaylists] = useState([]);
   const [playlistName, setPlaylistName] = useState('');
   const [playlistUrl, setPlaylistUrl] = useState('');
 
-  const handleAddPlaylist = () => {
-    const newPlaylist = {
-      id: uuidv4(), // Generate a unique id for each playlist
-      name: playlistName,
-      url: playlistUrl
-    };
-    addPlaylist(newPlaylist);
+  const addPlaylist = () => {
+    setPlaylists([...playlists, { name: playlistName, url: playlistUrl }]);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
   return (
-    <Box>
-      <TextField
-        label="Playlist Name"
-        value={playlistName}
-        onChange={(e) => setPlaylistName(e.target.value)}
-      />
-      <TextField
-        label="Playlist URL"
-        value={playlistUrl}
-        onChange={(e) => setPlaylistUrl(e.target.value)}
-      />
-      <Button onClick={handleAddPlaylist} variant="contained" color="primary">
-        Add Playlist
-      </Button>
-      <List>
-        {playlists.map((playlist) => (
-          <ListItem key={playlist.id}>
-            <ListItemText primary={playlist.name} />
-            <IconButton onClick={() => deletePlaylist(playlist.id)}>
-              <DeleteIcon />
-            </IconButton>
-            <IconButton>
-              <EditIcon />
-            </IconButton>
-          </ListItem>
-        ))}
-      </List>
-    </Box>
+    <div>
+      <div style={{ display: 'flex', margin: '20px' }}>
+        <TextField
+          label="Playlist Name"
+          value={playlistName}
+          onChange={(e) => setPlaylistName(e.target.value)}
+          style={{ marginRight: '10px' }}
+        />
+        <TextField
+          label="Playlist URL"
+          value={playlistUrl}
+          onChange={(e) => setPlaylistUrl(e.target.value)}
+          style={{ marginRight: '10px' }}
+        />
+        <Button variant="contained" color="primary" onClick={addPlaylist}>
+          Add Playlist
+        </Button>
+      </div>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Playlist Name</TableCell>
+              <TableCell>Playlist URL</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {playlists.map((playlist, index) => (
+              <TableRow key={index}>
+                <TableCell>{playlist.name}</TableCell>
+                <TableCell>{playlist.url}</TableCell>
+                <TableCell>
+                  <Button variant="contained" color="secondary">
+                    Edit
+                  </Button>
+                  <Button variant="contained" color="error">
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
   );
-};
+}
 
 export default ManagePlaylists;
