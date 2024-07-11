@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 function ManagePlaylists() {
   const [playlists, setPlaylists] = useState([]);
@@ -46,12 +48,12 @@ function ManagePlaylists() {
                 <TableCell>{playlist.name}</TableCell>
                 <TableCell>{playlist.url}</TableCell>
                 <TableCell>
-                  <Button variant="contained" color="secondary">
-                    Edit
-                  </Button>
-                  <Button variant="contained" color="error">
-                    Delete
-                  </Button>
+                  <IconButton color="primary">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton color="error">
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
