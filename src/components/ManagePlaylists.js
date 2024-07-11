@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
+import { addPlaylistToDB, getPlaylistsFromDB, deletePlaylistFromDB, updatePlaylistInDB } from '../services/db';
 
 function ManagePlaylists() {
   const [playlists, setPlaylists] = useState([]);
@@ -9,13 +12,47 @@ function ManagePlaylists() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
-  const addPlaylist = () => {
-    setPlaylists([...playlists, { name: playlistName, url: playlistUrl }]);
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      const dbPlaylists = await getPlaylistsFromDB();
+      setPlaylists(dbPlaylists);
+    };
+    fetchPlaylists();
+  }, []);
+
+  const addPlaylist = async () => {
+    const newPlaylist = { name: playlistName, url: playlistUrl };
+    await addPlaylistToDB(newPlaylist);
+    setPlaylists([...playlists, newPlaylist]);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
   const handleCheckboxChange = (index) => {
+    setSelectedPlaylist(index);
+  };
+
+  const saveToDatabase = async () => {
+    if (selectedPlaylist !== null) {
+      const selected = playlists[selectedPlaylist];
+      try {
+        await updatePlaylistInDB(selected.id, selected); // Using updatePlaylistInDB from db.js
+        console.log('Playlist saved successfully');
+      } catch (error) {
+        console.error('Error saving playlist:', error);
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    await deletePlaylistFromDB(id);
+    setPlaylists(playlists.filter((playlist) => playlist.id !== id));
+  };
+
+  const handleEdit = (index) => {
+    const playlist = playlists[index];
+    setPlaylistName(playlist.name);
+    setPlaylistUrl(playlist.url);
     setSelectedPlaylist(index);
   };
 
@@ -34,9 +71,12 @@ function ManagePlaylists() {
           onChange={(e) => setPlaylistUrl(e.target.value)}
           style={{ marginRight: '10px' }}
         />
-        <Button variant="contained" color="primary" onClick={addPlaylist}>
-          Add Playlist
-        </Button>
+        <IconButton color="primary" onClick={addPlaylist}>
+          <AddIcon />
+        </IconButton>
+        <IconButton color="secondary" onClick={saveToDatabase}>
+          <SaveIcon />
+        </IconButton>
       </div>
       <TableContainer component={Paper}>
         <Table>
@@ -60,10 +100,10 @@ function ManagePlaylists() {
                 <TableCell>{playlist.name}</TableCell>
                 <TableCell>{playlist.url}</TableCell>
                 <TableCell>
-                  <IconButton color="primary">
+                  <IconButton color="primary" onClick={() => handleEdit(index)}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton color="error">
+                  <IconButton color="error" onClick={() => handleDelete(playlist.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
