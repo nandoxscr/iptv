@@ -25,8 +25,9 @@ export const addPlaylistToDB = async (playlist) => {
   const db = await initDB();
   const tx = db.transaction('PLAYLIST_STORE', 'readwrite');
   const store = tx.objectStore('PLAYLIST_STORE');
-  await store.put(playlist);
+  const id = await store.put(playlist);
   await tx.done;
+  return id;
 };
 
 export const deletePlaylistFromDB = async (id) => {

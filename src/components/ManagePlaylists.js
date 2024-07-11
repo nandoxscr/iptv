@@ -14,6 +14,7 @@ function ManagePlaylists() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
+  // Fetch playlists from the database on component mount
   useEffect(() => {
     const fetchPlaylists = async () => {
       const dbPlaylists = await getPlaylistsFromDB();
@@ -26,14 +27,17 @@ function ManagePlaylists() {
     fetchPlaylists();
   }, []);
 
+  // Add a new playlist to the database and update state
   const addPlaylist = async () => {
     const newPlaylist = { name: playlistName, url: playlistUrl, isSelected: false };
-    await addPlaylistToDB(newPlaylist);
+    const id = await addPlaylistToDB(newPlaylist);
+    newPlaylist.id = id;  // Ensure the new playlist has an id
     setPlaylists([...playlists, newPlaylist]);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
+  // Handle checkbox change to select a playlist
   const handleCheckboxChange = async (index) => {
     const updatedPlaylists = playlists.map((playlist, i) => ({
       ...playlist,
@@ -44,6 +48,7 @@ function ManagePlaylists() {
     await Promise.all(updatedPlaylists.map(p => updatePlaylistInDB(p.id, p)));
   };
 
+  // Save the selected playlist to the database and confirm
   const saveToDatabase = async () => {
     if (selectedPlaylist !== null) {
       const selected = playlists[selectedPlaylist];
@@ -59,11 +64,13 @@ function ManagePlaylists() {
     }
   };
 
+  // Delete a playlist from the database and update state
   const handleDelete = async (id) => {
     await deletePlaylistFromDB(id);
     setPlaylists(playlists.filter((playlist) => playlist.id !== id));
   };
 
+  // Edit a playlist by populating input fields and selecting it
   const handleEdit = (index) => {
     const playlist = playlists[index];
     setPlaylistName(playlist.name);
