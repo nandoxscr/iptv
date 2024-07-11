@@ -1,24 +1,41 @@
-import React from 'react';
+// src/components/ChannelList.js
+
+import React, { useEffect } from 'react';
 import { usePlaylistContext } from '../context/PlaylistContext';
 import { Box, List, ListItem, ListItemText } from '@mui/material';
+import parser from 'iptv-playlist-parser';
 
-const ChannelList = ({ category }) => {
+const ChannelList = () => {
   const { playlists } = usePlaylistContext();
 
-  if (!playlists) {
+  useEffect(() => {
+    if (playlists.length > 0) {
+      console.log('Playlists:', playlists);
+
+      playlists.forEach(playlist => {
+        if (playlist.url) {
+          fetch(playlist.url)
+            .then(response => response.text())
+            .then(data => {
+              const result = parser.parse(data);
+              console.log('Parsed playlist:', result);
+            })
+            .catch(error => console.error('Error fetching playlist:', error));
+        }
+      });
+    }
+  }, [playlists]);
+
+  if (!playlists.length) {
     return <div>Loading...</div>;
   }
-
-  const filteredChannels = playlists.flatMap(playlist => 
-    (playlist.items || []).filter(item => item.groupTitle === category)
-  );
 
   return (
     <Box>
       <List>
-        {filteredChannels.map((channel, index) => (
+        {playlists.map((playlist, index) => (
           <ListItem key={index}>
-            <ListItemText primary={channel.name} secondary={channel.url} />
+            <ListItemText primary={playlist.name} secondary={playlist.url} />
           </ListItem>
         ))}
       </List>
