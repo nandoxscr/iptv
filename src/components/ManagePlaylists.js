@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton } from '@mui/material';
+import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -7,11 +7,16 @@ function ManagePlaylists() {
   const [playlists, setPlaylists] = useState([]);
   const [playlistName, setPlaylistName] = useState('');
   const [playlistUrl, setPlaylistUrl] = useState('');
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
   const addPlaylist = () => {
     setPlaylists([...playlists, { name: playlistName, url: playlistUrl }]);
     setPlaylistName('');
     setPlaylistUrl('');
+  };
+
+  const handleCheckboxChange = (index) => {
+    setSelectedPlaylist(index);
   };
 
   return (
@@ -37,6 +42,7 @@ function ManagePlaylists() {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell>Select</TableCell>
               <TableCell>Playlist Name</TableCell>
               <TableCell>Playlist URL</TableCell>
               <TableCell>Actions</TableCell>
@@ -45,6 +51,12 @@ function ManagePlaylists() {
           <TableBody>
             {playlists.map((playlist, index) => (
               <TableRow key={index}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedPlaylist === index}
+                    onChange={() => handleCheckboxChange(index)}
+                  />
+                </TableCell>
                 <TableCell>{playlist.name}</TableCell>
                 <TableCell>{playlist.url}</TableCell>
                 <TableCell>
