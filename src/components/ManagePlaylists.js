@@ -1,12 +1,13 @@
 // src/components/ManagePlaylists.js
 
 import React, { useState, useEffect } from 'react';
-import { TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
+import { TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Checkbox } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import SaveIcon from '@mui/icons-material/Save';
-import { addPlaylistToDB, getPlaylistsFromDB, deletePlaylistFromDB, updatePlaylistInDB } from '../services/db';
+import { addPlaylistToDB, getPlaylistsFromDB, deletePlaylistFromDB, updatePlaylistInDB, addChannelsToDB, clearChannelsFromDB } from '../services/db';
+import axios from 'axios';
+import { parse } from 'iptv-playlist-parser';
 
 function ManagePlaylists() {
   const [playlists, setPlaylists] = useState([]);
@@ -14,63 +15,84 @@ function ManagePlaylists() {
   const [playlistUrl, setPlaylistUrl] = useState('');
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
 
-  // Fetch playlists from the database on component mount
   useEffect(() => {
     const fetchPlaylists = async () => {
       const dbPlaylists = await getPlaylistsFromDB();
       setPlaylists(dbPlaylists);
-      const selected = dbPlaylists.find(p => p.isSelected);
-      if (selected) {
-        setSelectedPlaylist(dbPlaylists.indexOf(selected));
-      }
     };
     fetchPlaylists();
   }, []);
 
-  // Add a new playlist to the database and update state
   const addPlaylist = async () => {
     const newPlaylist = { name: playlistName, url: playlistUrl, isSelected: false };
-    const id = await addPlaylistToDB(newPlaylist);
-    newPlaylist.id = id;  // Ensure the new playlist has an id
+    await addPlaylistToDB(newPlaylist);
     setPlaylists([...playlists, newPlaylist]);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
-  // Handle checkbox change to select a playlist
   const handleCheckboxChange = async (index) => {
     const updatedPlaylists = playlists.map((playlist, i) => ({
       ...playlist,
       isSelected: i === index,
     }));
     setPlaylists(updatedPlaylists);
-    setSelectedPlaylist(index);
-    await Promise.all(updatedPlaylists.map(p => updatePlaylistInDB(p.id, p)));
-  };
-
-  // Save the selected playlist to the database and confirm
-  const saveToDatabase = async () => {
-    if (selectedPlaylist !== null) {
-      const selected = playlists[selectedPlaylist];
+    setSelectedPlaylist(updatedPlaylists[index]);
+    
+    const selected = updatedPlaylists[index];
+    if (selected && selected.url) {
       try {
-        await updatePlaylistInDB(selected.id, selected);
-        console.log('Playlist saved successfully');
-        const dbPlaylists = await getPlaylistsFromDB();
-        const updatedPlaylist = dbPlaylists.find(p => p.id === selected.id);
-        console.log('Updated playlist from DB:', updatedPlaylist);
+        await clearChannelsFromDB();  // Clear existing channels
+
+        const response = await axios.get(selected.url);
+        const data = response.data;
+        const result = parse(data);
+
+        const channels = categorizeChannels(result.items);
+        
+        // Flattening the channels object to store all channels in the DB with group information
+        const allChannels = [
+          ...channels.live.map(channel => ({ ...channel, group: 'live' })),
+          ...channels.series.map(channel => ({ ...channel, group: 'series' })),
+          ...channels.movie.map(channel => ({ ...channel, group: 'movie' })),
+        ];
+        await addChannelsToDB(allChannels);
+
+        await updatePlaylistInDB(selected.id, { ...selected, isSelected: true });
+
+        console.log('Fetched and stored channels:', channels);
+        console.log('Live channels:', channels.live);
+        console.log('Series:', channels.series);
+        console.log('Movies:', channels.movie);
       } catch (error) {
-        console.error('Error saving playlist:', error);
+        console.error('Error fetching playlist:', error);
       }
     }
   };
 
-  // Delete a playlist from the database and update state
+  const categorizeChannels = (channels) => {
+    const live = [];
+    const series = [];
+    const movie = [];
+    channels.forEach(channel => {
+      if (channel.url) {
+        if (channel.url.includes('series')) {
+          series.push(channel);
+        } else if (channel.url.includes('movie')) {
+          movie.push(channel);
+        } else {
+          live.push(channel);
+        }
+      }
+    });
+    return { live, series, movie };
+  };
+
   const handleDelete = async (id) => {
     await deletePlaylistFromDB(id);
     setPlaylists(playlists.filter((playlist) => playlist.id !== id));
   };
 
-  // Edit a playlist by populating input fields and selecting it
   const handleEdit = (index) => {
     const playlist = playlists[index];
     setPlaylistName(playlist.name);
@@ -96,9 +118,6 @@ function ManagePlaylists() {
         <IconButton color="primary" onClick={addPlaylist}>
           <AddIcon />
         </IconButton>
-        <IconButton color="secondary" onClick={saveToDatabase}>
-          <SaveIcon />
-        </IconButton>
       </div>
       <TableContainer component={Paper}>
         <Table>
@@ -115,7 +134,7 @@ function ManagePlaylists() {
               <TableRow key={index}>
                 <TableCell>
                   <Checkbox
-                    checked={selectedPlaylist === index}
+                    checked={playlist.isSelected}
                     onChange={() => handleCheckboxChange(index)}
                   />
                 </TableCell>

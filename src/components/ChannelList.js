@@ -1,96 +1,99 @@
 // src/components/ChannelList.js
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { usePlaylistContext } from '../context/PlaylistContext';
-import { Box, List, ListItem, ListItemText, Typography, Button } from '@mui/material';
-import { parse } from 'iptv-playlist-parser';
+import { Box, List, ListItem, ListItemText, Typography, Button, ButtonGroup, Pagination } from '@mui/material';
+import { getChannelsFromDB } from '../services/db';
 
 const ChannelList = () => {
-  const { playlists, loadedPlaylists } = usePlaylistContext();
-  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [categorizedChannels, setCategorizedChannels] = useState({
     live: [],
     series: [],
     movie: [],
   });
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('live');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [channelsPerPage] = useState(10);
 
-  const fetchSelectedPlaylist = async () => {
-    if (loadedPlaylists) {
-      const selected = playlists.find(playlist => playlist.isSelected);
-      if (selected && selected.url) {
-        try {
-          const response = await axios.get(selected.url);
-          const data = response.data;
-          const result = parse(data);
-          categorizeChannels(result.items);
-          setSelectedPlaylist(result);
-          // console.log('Playlist:', data);
-          console.log('Parsed playlist:', result);
-        } catch (error) {
-          console.error('Error fetching playlist:', error);
-        }
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const channels = await getChannelsFromDB();
+        categorizeChannels(channels);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching channels from DB:', error);
+        setLoading(false);
       }
-    }
+    };
+
+    const categorizeChannels = (channels) => {
+      const live = [];
+      const series = [];
+      const movie = [];
+      channels.forEach(channel => {
+        if (channel.group) {
+          if (channel.group === 'live') {
+            live.push(channel);
+          } else if (channel.group === 'series') {
+            series.push(channel);
+          } else if (channel.group === 'movie') {
+            movie.push(channel);
+          }
+        }
+      });
+      setCategorizedChannels({ live, series, movie });
+    };
+
+    fetchChannels();
+  }, []);
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
   };
 
-  const categorizeChannels = (channels) => {
-    const live = [];
-    const series = [];
-    const movie = [];
-    channels.forEach(channel => {
-      if (channel.url) {
-        if (channel.url.includes('series')) {
-          series.push(channel);
-        } else if (channel.url.includes('movie')) {
-          movie.push(channel);
-        } else {
-          live.push(channel);
-        }
-      }
-    });
-    setCategorizedChannels({ live, series, movie });
-    console.log('Live channels:', live);
-    console.log('Series:', series);
-    console.log('Movies:', movie);
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
   };
+
+  const getCurrentPageChannels = () => {
+    const startIndex = (currentPage - 1) * channelsPerPage;
+    const endIndex = startIndex + channelsPerPage;
+    return categorizedChannels[selectedCategory].slice(startIndex, endIndex);
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  const channelsToDisplay = getCurrentPageChannels();
+  const totalChannels = categorizedChannels[selectedCategory].length;
+  const totalPages = Math.ceil(totalChannels / channelsPerPage);
 
   return (
     <Box>
-      <Typography variant="h6">Select Category</Typography>
-      <Button variant="contained" color="primary" onClick={fetchSelectedPlaylist}>
-        Fetch Playlist
-      </Button>
-      {!loadedPlaylists && <div>Loading...</div>}
-      {loadedPlaylists && !selectedPlaylist && <div>No playlist selected</div>}
-      {selectedPlaylist && (
-        <>
-          <Typography variant="h6">Live Channels</Typography>
-          <List>
-            {categorizedChannels.live.map((channel, index) => (
-              <ListItem key={index}>
-                <ListItemText primary={channel.name} secondary={channel.url} />
-              </ListItem>
-            ))}
-          </List>
-          <Typography variant="h6">Series</Typography>
-          <List>
-            {categorizedChannels.series.map((channel, index) => (
-              <ListItem key={index}>
-                <ListItemText primary={channel.name} secondary={channel.url} />
-              </ListItem>
-            ))}
-          </List>
-          <Typography variant="h6">Movies</Typography>
-          <List>
-            {categorizedChannels.movie.map((channel, index) => (
-              <ListItem key={index}>
-                <ListItemText primary={channel.name} secondary={channel.url} />
-              </ListItem>
-            ))}
-          </List>
-        </>
-      )}
+      <Typography variant="h4" gutterBottom>Select Category</Typography>
+      <ButtonGroup variant="contained" color="primary" aria-label="outlined primary button group">
+        <Button onClick={() => handleCategoryChange('live')}>Live</Button>
+        <Button onClick={() => handleCategoryChange('series')}>Series</Button>
+        <Button onClick={() => handleCategoryChange('movie')}>Movies</Button>
+      </ButtonGroup>
+      
+      <Typography variant="h6" gutterBottom>{selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Channels</Typography>
+      <List>
+        {channelsToDisplay.map((channel, index) => (
+          <ListItem key={index}>
+            <ListItemText primary={channel.name} secondary={channel.url} />
+          </ListItem>
+        ))}
+      </List>
+      <Pagination
+        count={totalPages}
+        page={currentPage}
+        onChange={handlePageChange}
+        color="primary"
+      />
     </Box>
   );
 };
