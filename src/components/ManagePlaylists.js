@@ -32,21 +32,30 @@ function ManagePlaylists() {
   const addPlaylist = async () => {
     const newPlaylist = { name: playlistName, url: playlistUrl, isSelected: false };
     await addPlaylistToDB(newPlaylist);
-    setPlaylists([...playlists, newPlaylist]);
+    const dbPlaylists = await getPlaylistsFromDB(); // Fetch updated playlists
+    setPlaylists(dbPlaylists);
     setPlaylistName('');
     setPlaylistUrl('');
   };
 
-  const handleCheckboxChange = (index) => {
-    const updatedPlaylists = playlists.map((playlist, i) => {
-      if (i === index) {
-        return { ...playlist, isSelected: !playlist.isSelected };
-      } else {
-        return { ...playlist, isSelected: false };
-      }
-    });
+  const handleCheckboxChange = async (index) => {
+    const selectedPlaylistId = playlists[index].id;
+
+    // Set all playlists to isSelected: false except the one selected
+    const updatedPlaylists = playlists.map((playlist, i) => ({
+      ...playlist,
+      isSelected: i === index ? !playlist.isSelected : false,
+    }));
+
     setPlaylists(updatedPlaylists);
-    setSelectedPlaylist(updatedPlaylists.find(playlist => playlist.isSelected) || null);
+
+    // Update each playlist in the database
+    for (const playlist of updatedPlaylists) {
+      await updatePlaylistInDB(playlist.id, playlist);
+    }
+
+    const selected = updatedPlaylists.find((playlist) => playlist.id === selectedPlaylistId && playlist.isSelected) || null;
+    setSelectedPlaylist(selected);
   };
 
   const handleSave = async () => {
@@ -110,7 +119,8 @@ function ManagePlaylists() {
 
   const handleDelete = async (id) => {
     await deletePlaylistFromDB(id);
-    setPlaylists(playlists.filter((playlist) => playlist.id !== id));
+    const dbPlaylists = await getPlaylistsFromDB(); // Fetch updated playlists
+    setPlaylists(dbPlaylists);
   };
 
   const handleEdit = (index) => {
@@ -159,7 +169,7 @@ function ManagePlaylists() {
           </TableHead>
           <TableBody>
             {playlists.map((playlist, index) => (
-              <TableRow key={index}>
+              <TableRow key={playlist.id}>
                 <TableCell>
                   <Checkbox
                     checked={playlist.isSelected}
