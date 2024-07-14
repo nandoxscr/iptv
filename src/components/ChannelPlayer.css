@@ -15,11 +15,14 @@
 .channel-player {
   flex: 1;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .channel-player .video-js {
   width: 100%;
+  height: calc(100vh - 100px); /* Adjust height as needed */
   max-width: 800px; /* Set a maximum width for the video player */
-  height: 500px;
   margin: auto; /* Center the video player horizontally */
 }
