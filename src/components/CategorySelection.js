@@ -1,7 +1,6 @@
 // src/components/CategorySelection.js
 import React from 'react';
-import {Button} from '@mui/material';
-
+import { Button } from '@mui/material';
 
 const CategorySelection = ({ onSelectCategory }) => {
   const handleCategorySelect = (category) => {

@@ -1,128 +1,95 @@
-// src/components/ChannelList.js
+// src/components/ChannelPlayer.js
 
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { usePlaylistContext } from '../context/PlaylistContext';
-import { Box, List, ListItem, ListItemText, Typography } from '@mui/material';
-import { parse } from 'iptv-playlist-parser';
-import { addPlaylistToDB, getPlaylistsFromDB } from '../services/db';
+import React, { useState, useEffect } from 'react';
+import { Box, List, ListItem, ListItemText, Typography, TextField } from '@mui/material';
+import VideoPlayer from './VideoPlayer';
+import { getChannelsFromDB } from '../services/db';
+import './ChannelPlayer.css'; // Ensure you create this CSS file
 
-const ChannelList = () => {
-  const { playlists, loadedPlaylists } = usePlaylistContext();
-  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
-  const [categorizedChannels, setCategorizedChannels] = useState({
-    live: [],
-    series: [],
-    movie: [],
-  });
+const ChannelPlayer = () => {
+  const [channels, setChannels] = useState([]);
+  const [filteredChannels, setFilteredChannels] = useState([]);
+  const [currentChannelIndex, setCurrentChannelIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [url, setUrl] = useState('');
 
   useEffect(() => {
-    const fetchAndStorePlaylist = async () => {
-      if (loadedPlaylists) {
-        const selected = playlists.find(playlist => playlist.isSelected);
-        if (selected && selected.url) {
-          try {
-            const response = await axios.get(selected.url);
-            const data = response.data;
-            const result = parse(data);
-
-            // Add timestamp to the result
-            const playlistWithTimestamp = {
-              ...result,
-              timestamp: new Date().toISOString(),
-            };
-
-            // Store the playlist in IndexedDB
-            await addPlaylistToDB(playlistWithTimestamp);
-
-            // Categorize and set the state
-            categorizeChannels(result.items);
-            setSelectedPlaylist(result);
-            console.log('Playlist:', data);
-            console.log('Parsed playlist:', result);
-          } catch (error) {
-            console.error('Error fetching playlist:', error);
-          }
-        }
-      }
+    const fetchChannels = async () => {
+      const channelsFromDB = await getChannelsFromDB();
+      setChannels(channelsFromDB);
+      setFilteredChannels(channelsFromDB);
+      setUrl(channelsFromDB[0]?.url || '');
+      setLoading(false);
     };
-
-    // Fetch and store playlist on mount
-    fetchAndStorePlaylist();
-  }, [playlists, loadedPlaylists]);
-
-  useEffect(() => {
-    const loadPlaylistFromDB = async () => {
-      const storedPlaylists = await getPlaylistsFromDB();
-      if (storedPlaylists.length > 0) {
-        const latestPlaylist = storedPlaylists.reduce((prev, current) => (prev.timestamp > current.timestamp ? prev : current));
-        categorizeChannels(latestPlaylist.items);
-        setSelectedPlaylist(latestPlaylist);
-        console.log('Loaded playlist from DB:', latestPlaylist);
-      }
-    };
-
-    // Load playlist from IndexedDB on mount
-    loadPlaylistFromDB();
+    fetchChannels();
   }, []);
 
-  const categorizeChannels = (channels) => {
-    const live = [];
-    const series = [];
-    const movie = [];
-    channels.forEach(channel => {
-      if (channel.url) {
-        if (channel.url.includes('series')) {
-          series.push(channel);
-        } else if (channel.url.includes('movie')) {
-          movie.push(channel);
-        } else {
-          live.push(channel);
-        }
-      }
-    });
-    setCategorizedChannels({ live, series, movie });
-    console.log('Live channels:', live);
-    console.log('Series:', series);
-    console.log('Movies:', movie);
+  const handleSearch = (event) => {
+    const term = event.target.value.toLowerCase();
+    setSearchTerm(term);
+    const filtered = channels.filter(channel =>
+      channel.name.toLowerCase().includes(term)
+    );
+    setFilteredChannels(filtered);
   };
 
-  if (!loadedPlaylists) {
-    return <div>Loading...</div>;
-  }
+  const handleNext = () => {
+    const newIndex = (currentChannelIndex + 1) % filteredChannels.length;
+    changeChannel(newIndex);
+  };
 
-  if (!selectedPlaylist) {
-    return <div>No playlist selected</div>;
-  }
+  const handlePrevious = () => {
+    const newIndex = (currentChannelIndex - 1 + filteredChannels.length) % filteredChannels.length;
+    changeChannel(newIndex);
+  };
+
+  const handleChannelClick = (index) => {
+    changeChannel(index);
+  };
+
+  const changeChannel = (index) => {
+    setCurrentChannelIndex(index);
+    setLoading(true);
+    setTimeout(() => {
+      setUrl(filteredChannels[index].url);
+      setLoading(false);
+    }, 500); // Delay of 500ms before setting the new URL
+  };
 
   return (
-    <Box>
-      <Typography variant="h6">Live Channels</Typography>
-      <List>
-        {categorizedChannels.live.map((channel, index) => (
-          <ListItem key={index}>
-            <ListItemText primary={channel.name} secondary={channel.url} />
-          </ListItem>
-        ))}
-      </List>
-      <Typography variant="h6">Series</Typography>
-      <List>
-        {categorizedChannels.series.map((channel, index) => (
-          <ListItem key={index}>
-            <ListItemText primary={channel.name} secondary={channel.url} />
-          </ListItem>
-        ))}
-      </List>
-      <Typography variant="h6">Movies</Typography>
-      <List>
-        {categorizedChannels.movie.map((channel, index) => (
-          <ListItem key={index}>
-            <ListItemText primary={channel.name} secondary={channel.url} />
-          </ListItem>
-        ))}
-      </List>
+    <Box display="flex" height="100vh">
+      <Box className="channel-list" width="300px" overflow="auto" borderRight="1px solid #ddd">
+        <TextField
+          label="Search Channels"
+          value={searchTerm}
+          onChange={handleSearch}
+          variant="outlined"
+          fullWidth
+          margin="normal"
+        />
+        <List>
+          {filteredChannels.map((channel, index) => (
+            <ListItem button key={index} onClick={() => handleChannelClick(index)}>
+              <ListItemText primary={channel.name} />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+      <Box flex={1} padding="20px" display="flex" flexDirection="column">
+        <Typography variant="h4" gutterBottom>Channel Player</Typography>
+        {loading ? (
+          <div>Loading...</div> // Show loading state
+        ) : (
+          <VideoPlayer
+            url={url}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        )}
+      </Box>
     </Box>
   );
 };
 
-export default ChannelList;
+export default ChannelPlayer;

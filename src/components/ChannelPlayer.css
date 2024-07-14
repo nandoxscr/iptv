@@ -1,0 +1,25 @@
+/* src/components/ChannelPlayer.css */
+
+@import "~video.js/dist/video-js.css";
+
+.video-js .vjs-control-bar {
+  display: none; /* Hide default control bar */
+}
+
+.channel-list {
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid #ddd;
+}
+
+.channel-player {
+  flex: 1;
+  padding: 20px;
+}
+
+.channel-player .video-js {
+  width: 100%;
+  max-width: 800px; /* Set a maximum width for the video player */
+  height: 500px;
+  margin: auto; /* Center the video player horizontally */
+}
